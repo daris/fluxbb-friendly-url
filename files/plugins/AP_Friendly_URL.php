@@ -70,12 +70,15 @@ else // If not, we show the "Show text" form
 										<select name="url_scheme" tabindex="1">
 <?php
 
+	$url_schemes = array();
 	$d = dir(PUN_ROOT.'include/url/');
 	while ($f = $d->read())
 	{
 		if (substr($f, 0, 1) != '.' && is_dir(PUN_ROOT.'include/url/'.$f))
-			echo "\t\t\t\t\t\t\t\t".'<option value="'.$f.'"'.($pun_config['o_sef'] == $f ? ' selected="selected"' : '').'>'.str_replace('_', ' ', $f).'</option>'."\n";
+			$url_schemes[$f] = "\t\t\t\t\t\t\t\t".'<option value="'.$f.'"'.($pun_config['o_sef'] == $f ? ' selected="selected"' : '').'>'.str_replace('_', ' ', $f).'</option>'."\n";
 	}
+	ksort($url_schemes);
+	echo implode("\n", $url_schemes);
 ?>
 										</select>
 									</td>
