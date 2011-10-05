@@ -17,23 +17,14 @@ if (!isset($forum_url))
 	require PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php';
 
 // When running inside Patcher
-if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER')
+if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER' && $this->command == 'RUN' && $this->code == 'gen.php')
 {
 	if ($this->action == 'uninstall')
 		return;
 	$changes = url_get_changes();
 	
 	$cur_readme = $this->flux_mod->id.'/files/gen.php';
-	$this->steps[$cur_readme] = array();
-	foreach ($changes as $cur_file_name => $list)
-	{
-		$this->steps[$cur_readme][] = array('command' => 'OPEN', 'code' => $cur_file_name);
-		foreach ($list as $cur_change)
-		{
-			$this->steps[$cur_readme][] = array('command' => 'FIND', 'code' => $cur_change[0]);
-			$this->steps[$cur_readme][] = array('command' => 'REPLACE', 'code' => $cur_change[1]);
-		}
-	}
+	$this->steps[$cur_readme] = url_get_steps($changes);
 	
 	// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
 	if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
@@ -87,6 +78,22 @@ elseif (!defined('PATCHER_ROOT'))
 }
 
 
+function url_get_steps($changes)
+{
+	$steps = array();
+	foreach ($changes as $cur_file_name => $list)
+	{
+		$steps[] = array('command' => 'OPEN', 'code' => $cur_file_name);
+		foreach ($list as $cur_change)
+		{
+			$steps[] = array('command' => 'FIND', 'code' => $cur_change[0]);
+			$steps[] = array('command' => 'REPLACE', 'code' => $cur_change[1]);
+		}
+	}
+	return $steps;
+}
+
+
 function url_get_changes($save = false)
 {
 	global $cur_file;
@@ -99,76 +106,86 @@ function url_get_changes($save = false)
 		$cur_file = file_get_contents(PUN_ROOT.$cur_file_name);
 		$cur_file_before = $cur_file;
 
-		$expressions = array(
-			'#(href|src|action)(=")(.*?)(".{0,30})#',
-			'#(Location)(: )(.*?)(\).*)#',
-			'#(redirect\()(\')(.*?)(\'*[,\)].*)#',
-			'#(get_base_url\(\)\.\'?/?)()(.*?)([\),])#',
-		);
-		$manual_changes = array();
-		
-		if (basename($cur_file_name) != 'functions.php') // do not touch function paginate()
-			$expressions[] = '#(paginate\()(.*?,.*?,\s*\'?)(.*)(\'?\)[;\.].*)#';
-
-		if (basename($cur_file_name) == 'extern.php')
-		{
-			$expressions[] = '#(\$pun_config\[\'o_base_url\'\]\.\'?/?)()([^"]*?)(\'?[,;])#';
-			$expressions[] = '#(get_base_url\(true\)\.\'?/?)()([^"]*?)(\'?[,;])#';
-			$expressions[] = '#(\'link\'\s*=>\s*)()(\'?/?[^"]*?\'?)([,;])#'; // 'link' => '/index.php',
-			$expressions[] = '#(\[\'uri\'\]\s*=\s*)()(\'?/?[^"]*?\'?)([,;])#'; // ['uri'] = '/index.php',
-			
-			$manual_changes[] = array(
-				'\'/viewtopic.php?id=\'.$cur_topic[\'id\'].($order_posted ? \'\' : \'&action=new\')',
-				'forum_link($GLOBALS[\'forum_url\'][\'topic\'.($order_posted ? \'_new_posts\' : \'\')], array($cur_topic[\'id\'], sef_friendly($cur_topic[\'subject\'])))',
-			);
-		}
-
-		// Do not define PUN_ROOT twice
-		if (basename($cur_file_name) != 'rewrite.php' && !preg_match('#if \(!defined\(\'PUN_ROOT\'\)\)\s*define\(\'PUN_ROOT\',#si', $cur_file) && strpos($cur_file, 'define(\'PUN_ROOT\',') !== false)
-			$manual_changes[] = array('define(\'PUN_ROOT\',', 'if (!defined(\'PUN_ROOT\'))'."\n\t".'define(\'PUN_ROOT\',');
-		
-		// login.php referer fix
-		if (basename($cur_file_name) == 'login.php')
-		{
-			$manual_changes[] = array(
-				'if (!empty($_SERVER[\'HTTP_REFERER\']))'."\n".'{'."\n\t".'$referrer = parse_url($_SERVER[\'HTTP_REFERER\']);',
-				'if (!empty($_SERVER[\'HTTP_REFERER_REWRITTEN\']))'."\n".'{'."\n\t".'$referrer = parse_url($_SERVER[\'HTTP_REFERER_REWRITTEN\']);'
-			);
-			$manual_changes[] = array(
-				'if ($referrer[\'host\'] == $valid[\'host\'] && preg_match(\'%^\'.preg_quote($valid[\'path\'], \'%\').\'/(.*?)\.php%i\', $referrer[\'path\']))'."\n\t\t".'$redirect_url = $_SERVER[\'HTTP_REFERER\'];',
-				'if ($referrer[\'host\'] == $valid[\'host\'] && preg_match(\'%^\'.preg_quote($valid[\'path\'], \'%\').\'/%i\', $referrer[\'path\']))'."\n\t\t".'$redirect_url = $_SERVER[\'HTTP_REFERER\'];',
-			);
-		}
-		foreach ($manual_changes as $cur_change)
-		{
-			$cur_file = str_replace($cur_change[0], $cur_change[1], $cur_file);
-			
-			if (!isset($changes[$cur_file_name]))
-				$changes[$cur_file_name] = array();
-		
-			$changes[$cur_file_name][] = array($cur_change[0], $cur_change[1]);
-		}
-
-		foreach ($expressions as $exp)
-		{
-			preg_match_all($exp, $cur_file, $matches, PREG_SET_ORDER);
-			foreach ($matches as $match)
-			{
-				$replace = url_replace($match);
-				$cur_file = str_replace($match[0], $replace, $cur_file);
-				
-				if (!isset($changes[$cur_file_name]))
-					$changes[$cur_file_name] = array();
-			
-				$changes[$cur_file_name][] = array($match[0], $replace);
-			}
-		}
+		$cur_file = url_replace_file($cur_file_name, $cur_file, $changes);
 		
 		if ($save && $cur_file != $cur_file_before && !empty($cur_file))
 			file_put_contents(PUN_ROOT.$cur_file_name, $cur_file);
 	}
 	
 	return $changes;
+}
+
+function url_replace_file($cur_file_name, $cur_file, &$changes)
+{
+	$expressions = array(
+		'#(href|src|action)(=")(.*?)(".{0,30})#',
+		'#(Location)(: )(.*?)(\).*)#',
+		'#(redirect\()(\')(.*?)(\'*[,\)].*)#',
+		'#(get_base_url\(\)\.\'?/?)()(.*?)([\),])#',
+	);
+	$manual_changes = array();
+	
+	if (basename($cur_file_name) != 'functions.php') // do not touch function paginate()
+		$expressions[] = '#(paginate\()(.*?,.*?,\s*\'?)(.*)(\'?\)[;\.].*)#';
+
+	if (basename($cur_file_name) == 'extern.php')
+	{
+		$expressions[] = '#(\$pun_config\[\'o_base_url\'\]\.\'?/?)()([^"]*?)(\'?[,;])#';
+		$expressions[] = '#(get_base_url\(true\)\.\'?/?)()([^"]*?)(\'?[,;])#';
+		$expressions[] = '#(\'link\'\s*=>\s*)()(\'?/?[^"]*?\'?)([,;])#'; // 'link' => '/index.php',
+		$expressions[] = '#(\[\'uri\'\]\s*=\s*)()(\'?/?[^"]*?\'?)([,;])#'; // ['uri'] = '/index.php',
+		
+		$manual_changes[] = array(
+			'\'/viewtopic.php?id=\'.$cur_topic[\'id\'].($order_posted ? \'\' : \'&action=new\')',
+			'forum_link($GLOBALS[\'forum_url\'][\'topic\'.($order_posted ? \'_new_posts\' : \'\')], array($cur_topic[\'id\'], sef_friendly($cur_topic[\'subject\'])))',
+		);
+	}
+
+	// Do not define PUN_ROOT twice
+	if (basename($cur_file_name) != 'rewrite.php' && !preg_match('#if \(!defined\(\'PUN_ROOT\'\)\)\s*define\(\'PUN_ROOT\',#si', $cur_file) && strpos($cur_file, 'define(\'PUN_ROOT\',') !== false)
+		$manual_changes[] = array('define(\'PUN_ROOT\',', 'if (!defined(\'PUN_ROOT\'))'."\n\t".'define(\'PUN_ROOT\',');
+	
+	// login.php referer fix
+	if (basename($cur_file_name) == 'login.php')
+	{
+		$manual_changes[] = array(
+			'if (!empty($_SERVER[\'HTTP_REFERER\']))'."\n".'{'."\n\t".'$referrer = parse_url($_SERVER[\'HTTP_REFERER\']);',
+			'if (!empty($_SERVER[\'HTTP_REFERER_REWRITTEN\']))'."\n".'{'."\n\t".'$referrer = parse_url($_SERVER[\'HTTP_REFERER_REWRITTEN\']);'
+		);
+		$manual_changes[] = array(
+			'if ($referrer[\'host\'] == $valid[\'host\'] && preg_match(\'%^\'.preg_quote($valid[\'path\'], \'%\').\'/(.*?)\.php%i\', $referrer[\'path\']))'."\n\t\t".'$redirect_url = $_SERVER[\'HTTP_REFERER\'];',
+			'if ($referrer[\'host\'] == $valid[\'host\'] && preg_match(\'%^\'.preg_quote($valid[\'path\'], \'%\').\'/%i\', $referrer[\'path\']))'."\n\t\t".'$redirect_url = $_SERVER[\'HTTP_REFERER\'];',
+		);
+	}
+	foreach ($manual_changes as $cur_change)
+	{
+		$cur_file = str_replace($cur_change[0], $cur_change[1], $cur_file);
+		
+		if (!isset($changes[$cur_file_name]))
+			$changes[$cur_file_name] = array();
+	
+		$changes[$cur_file_name][] = array($cur_change[0], $cur_change[1]);
+	}
+
+	foreach ($expressions as $exp)
+	{
+		preg_match_all($exp, $cur_file, $matches, PREG_SET_ORDER);
+		foreach ($matches as $match)
+		{
+			$replace = url_replace($match, $cur_file, $cur_file_name);
+			if (!$replace)
+				continue;
+
+			$cur_file = str_replace($match[0], $replace, $cur_file);
+			
+			if (!isset($changes[$cur_file_name]))
+				$changes[$cur_file_name] = array();
+		
+			$changes[$cur_file_name][] = array($match[0], $replace);
+		}
+	}
+	
+	return $cur_file;
 }
 
 function url_get_files()
@@ -206,9 +223,9 @@ function url_read_dir($directory, $recursive = false)
 }
 
 
-function url_replace($matches)
+function url_replace($matches, $cur_file, $cur_file_name)
 {
-	global $forum_url, $cur_file, $cur_file_name;
+	global $forum_url;
 
 	$ending = $tmp_action = '';
 	$rewrite = true;
@@ -225,7 +242,7 @@ function url_replace($matches)
 		$matches[3] == '$pun_config[\'o_base_url\'].\'/' || // base_url (eg. used in help.php)
 		$matches[3] == '$pun_config[\'o_base_url\']' || // base_url
 		basename($cur_file_name) == 'common.php' && $matches[3] == 'install.php') // exclude install.php link in include/common.php
-		return $matches[0];
+		return false;
 		
 	if (strpos($matches[1], '$pun_config[\'o_base_url\'].') !== false || strpos($matches[1], 'get_base_url') !== false)
 		$matches[1] = '';
@@ -252,7 +269,7 @@ function url_replace($matches)
 	{
 		$url = substr($url, 0, strpos($url, '#'));
 		if ($url == '')
-			return $matches[0];
+			return false;
 	}
 
 	if ($matches[1] == 'Location' && substr($url, -1) == '\'')
@@ -600,7 +617,7 @@ function url_replace($matches)
 
 
 	if ($link_p == '')
-		return $matches[0];
+		return false;
 
 	if ($matches[1] == 'paginate(')
 		$matches[2] = rtrim($matches[2], "'.");
@@ -641,15 +658,8 @@ function url_replace($matches)
 	$result = str_replace(array('\'\'.', '.\'\''), '', $result); 
 
 	if ($result == $matches[0])
-		return $matches[0];
+		return false;
 
-	$num_changes++;
-
-	// // Display results
-	// if (!isset($changes[$cur_file]))
-		// $changes[$cur_file] = array();
-	// $changes[$cur_file][] = array($matches[0], $result);
-	
 	return $result;
 }
 
