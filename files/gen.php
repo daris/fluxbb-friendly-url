@@ -170,21 +170,28 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 	foreach ($expressions as $exp)
 	{
 		preg_match_all($exp, $cur_file, $matches, PREG_SET_ORDER);
+		$cur_changes = array();
 		foreach ($matches as $match)
 		{
 			$replace = url_replace($match, $cur_file, $cur_file_name);
 			if (!$replace)
 				continue;
 
-			$cur_file = str_replace($match[0], $replace, $cur_file);
-			
-			if (!isset($changes[$cur_file_name]))
-				$changes[$cur_file_name] = array();
-		
-			$changes[$cur_file_name][] = array($match[0], $replace);
+			$cur_changes[] = array($match[0], $replace);
 		}
-	}
+		
+		if (count($cur_changes) == 0)
+			continue;
+		
+		foreach ($cur_changes as $cur_change)
+			$cur_file = str_replace($cur_change[0], $cur_change[1], $cur_file);
+		
+		if (!isset($changes[$cur_file_name]))
+			$changes[$cur_file_name] = array();
 	
+		$changes[$cur_file_name] = array_merge($changes[$cur_file_name], $cur_changes);
+	}
+
 	return $cur_file;
 }
 
