@@ -9,29 +9,14 @@ if (!defined('PUN_ROOT'))
 	if ($pun_user['g_id'] != PUN_ADMIN)
 		message($lang_common['No permission']);
 
-//	echo '<style>body {font: 11px Tahoma}</style>';
+	echo '<style>body {font-family: "Arial", "Helvetica", sans-serif; font-size: 81.25%;}</style>';
 }
 
-if (!isset($config_type))
-{
-	// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
-	if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
-		require PUN_ROOT.'include/cache.php';
-	generate_quickjump_cache();
+global $forum_url;
+if (!isset($forum_url))
+	require PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php';
 
-
-	global $forum_url;
-	if (!isset($forum_url))
-	{
-		// if (!file_exists(PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php'))
-		// {
-			// echo 'Already uninstalled';
-			// return;
-		// }
-		require PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php';
-	}
-}
-
+// When running inside Patcher
 if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER')
 {
 	if ($this->action == 'uninstall')
@@ -49,56 +34,60 @@ if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER')
 			$this->steps[$cur_readme][] = array('command' => 'REPLACE', 'code' => $cur_change[1]);
 		}
 	}
-}
-
-
-// If $friendly_url_changes variable is set, it means that this file is included by Patcher and we don't want to install/uninstall it
-if (!isset($friendly_url_changes))
-{
-	// if (!isset($_GET['action']) || $_GET['action'] == 'install')
-		// friendly_url_install();
-	// else
-		// friendly_url_uninstall();
-}
-
-function friendly_url_uninstall()
-{
-	// if (!file_exists(PUN_ROOT.'friendly_url_changes.php'))
-	// {
-		// echo 'File friendly_url_changes.php does not exist';
-		// return;
-	// }
-	// require PUN_ROOT.'friendly_url_changes.php';
-	// $info = array();
-	// $num_changes = 0;
-	// foreach ($friendly_url_changes as $cur_file => $changes)
-	// {
-		// // Skip if mod is already uninstalled (and its files doesn't exist)
-		// if (!file_exists(PUN_ROOT.$cur_file))
-			// continue;
-
-		// $file_contents = file_get_contents(PUN_ROOT.$cur_file);
-		// $search = $replace = array();
-		// foreach ($changes as $key => $cur_change)
-		// {
-			// $search[$key] = $cur_change[1];
-			// $replace[$key] = $cur_change[0];
-		// }
-		// $num_changes += count($search);
-		// $file_contents = str_replace($search, $replace, $file_contents);
-// //		echo pun_htmlspecialchars($file_contents);
-		// $info[] = '<strong>'.pun_htmlspecialchars($cur_file).'</strong>: '.count($search).' changes reverted';
-		// if (!empty($file_contents))
-			// file_put_contents(PUN_ROOT.$cur_file, $file_contents);
-	// }
-	// echo $num_changes.' changes reverted'."\n".'<br /><br />';
-	// echo implode('<br />'."\n", $info);
 	
-	// // No longer need this file
-	// unlink(PUN_ROOT.'friendly_url_changes.php');
+	// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
+	if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
+		require PUN_ROOT.'include/cache.php';
+	generate_quickjump_cache();
 }
 
-function url_get_changes()
+// Running outside Patcher
+elseif (!defined('PATCHER_ROOT'))
+{
+	if (isset($_POST['install']))
+	{
+		$changes = url_get_changes(true);
+		foreach ($changes as $cur_file_name => $change_list)
+			echo '<strong style="color: green">Patching file '.pun_htmlspecialchars($cur_file_name).'</strong>... ('.count($change_list).' changes)<br />';
+		echo 'Done';
+		
+		// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
+		if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
+			require PUN_ROOT.'include/cache.php';
+		generate_quickjump_cache();
+
+	}
+	else
+	{
+		$checking_failed = false;
+			
+		$files = url_get_files();
+		$info = array();
+		foreach ($files as $cur_file)
+		{
+			if (is_writable(PUN_ROOT.$cur_file))
+				$cur_info = '<span style="color: green">writable</span>';
+			else
+			{
+				if (!$checking_failed)
+					$checking_failed = true;
+				$cur_info = '<strong style="color: #AA0000">not writable</strong>';
+			}
+			$info[] = pun_htmlspecialchars($cur_file).'... '.$cur_info;
+		}
+		
+		if (!$checking_failed)
+			echo '<strong style="color: green">Friendly URL is ready to install.</strong><br />Click the following button to do it.<br /><form method="post" action=""><input type="submit" name="install" value="Install"></form>';
+		else
+			echo '<strong style="color: #AA0000">Checking failed, see list below.</strong><br />Refresh this page when you correct these permissions.<br /><br />';
+		
+		echo 'Details:<br />';
+		echo implode('<br />'."\n", $info);
+	}
+}
+
+
+function url_get_changes($save = false)
 {
 	global $cur_file;
 
@@ -107,10 +96,8 @@ function url_get_changes()
 	
 	foreach ($files as $cur_file_name)
 	{
-		// if (basename($cur_file_name) != 'viewforum.php')
-			// continue;
-			
 		$cur_file = file_get_contents(PUN_ROOT.$cur_file_name);
+		$cur_file_before = $cur_file;
 
 		$expressions = array(
 			'#(href|src|action)(=")(.*?)(".{0,30})#',
@@ -168,7 +155,7 @@ function url_get_changes()
 			foreach ($matches as $match)
 			{
 				$replace = url_replace($match);
-				//$cur_file = str_replace($match[0], $replace, $cur_file);
+				$cur_file = str_replace($match[0], $replace, $cur_file);
 				
 				if (!isset($changes[$cur_file_name]))
 					$changes[$cur_file_name] = array();
@@ -176,32 +163,12 @@ function url_get_changes()
 				$changes[$cur_file_name][] = array($match[0], $replace);
 			}
 		}
+		
+		if ($save && $cur_file != $cur_file_before && !empty($cur_file))
+			file_put_contents(PUN_ROOT.$cur_file_name, $cur_file);
 	}
 	
 	return $changes;
-//	exit;
-
-	// file_put_contents(PUN_ROOT.'friendly_url_changes.php', '<?php'."\n\n".'// Do not delete this file as you won\'t be able to uninstall this mod'."\n\n".'$friendly_url_changes = '.var_export($changes, true).';');
-
-	// foreach ($changes as $cur_file => $change_list)
-		// $num_changes += count($change_list);
-
-	// if ($num_changes > 0)
-		// echo 'Successfully changed '.$num_changes.' links'."\n";
-	// else
-		// echo 'No changes'."\n";
-
-	// $last_file = '';
-	// foreach ($changes as $cur_file => $change_list)
-	// {
-		// if ($last_file != $cur_file)
-		// {
-			// echo '<br /><br /><strong>'.pun_htmlspecialchars($file).'</strong><br /><br />';
-			// $last_file = $cur_file;
-		// }
-		// foreach ($change_list as $cur_change)
-			// echo '<span style="color: #AA0000">'.pun_htmlspecialchars($cur_change[0]).'</span><br />'."\n".'<span style="color: #00AA00">'.pun_htmlspecialchars($cur_change[1]).'</span><br /><br />'."\n";
-	// }
 }
 
 function url_get_files()

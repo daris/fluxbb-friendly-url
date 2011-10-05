@@ -2,15 +2,13 @@
 ##
 ##        Mod title:  Friendly URL
 ##
-##      Mod version:  1.0.6-dev
+##      Mod version:  1.0.7-dev
 ##  Works on FluxBB:  1.4.7
 ##     Release date:  2011-05-27
 ##      Review date:  2011-05-27
 ##           Author:  Daris (daris91@gmail.com)
 ##
 ##      Description:  Backport of FluxBB 1.3 friendly URL feature
-##
-##             Note:  gen.php script currently works with Patcher only!
 ##
 ##   Repository URL:  http://fluxbb.org/resources/mods/friendly-url/
 ##
