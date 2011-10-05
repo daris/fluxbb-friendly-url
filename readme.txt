@@ -19,6 +19,8 @@
 ##                    include/cache.php
 ##                    viewtopic.php
 ##
+##     Known issues:  http://localhost/fluxbb/help/http://localhost/fluxbb/help.php link in help.php
+##
 ##       Affects DB:  Yes
 ##
 ##       DISCLAIMER:  Please note that "mods" are not officially supported by

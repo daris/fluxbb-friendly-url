@@ -256,6 +256,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	
 	// Do some url cleaning
 	$url = str_replace('$pun_config[\'o_base_url\'].\'/', '\'', $url);
+	$url = preg_replace('#pun_htmlspecialchars\(\'?/?(.*)\)#', '$1', $url);
 	$url = str_replace(array(
 		'$pun_config[\'o_base_url\']',
 		'pun_htmlspecialchars(get_base_url(true)).',
@@ -264,8 +265,6 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		'get_base_url().',
 		'pun_htmlspecialchars(\'/\')',
 	), '', $url);
-	
-	$url = str_replace('pun_htmlspecialchars(\'/', 'pun_htmlspecialchars(\'', $url);
 
 	$url = preg_replace('/<\?php echo\s*/', '\'.', $url);
 	$url = preg_replace('/\s*\?>/', '.\'', $url);
@@ -672,7 +671,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 function printable_var($var)
 {
-	return (strpos($var, '$') !== false) ? trim($var, "'.") : $var;
+	return (strpos($var, '$') !== false || is_numeric(trim($var, "'."))) ? trim($var, "'.") : $var;
 }
 
 function correct_apostr($str)
