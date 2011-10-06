@@ -30,7 +30,7 @@ function furl_read_dir($directory, $recursive = false)
 				if ($recursive)
 					$files = array_merge($files, furl_read_dir($directory.'/'.$f, $recursive));
 			}
-			elseif (substr($f, -4) == '.php' && !in_array($f, array('config.php', 'gen.php', 'install.php', 'install_mod.php', 'db_update.php', 'patcher_config.php')))
+			elseif (substr($f, -4) == '.php' && substr($f, 0, 6) != 'admin_' && !in_array($f, array('config.php', 'gen.php', 'install.php', 'install_mod.php', 'db_update.php', 'patcher_config.php')))
 				$files[] = ($directory == '.' ? '' : $directory.'/').$f;
 		}
 	}
