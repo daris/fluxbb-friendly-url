@@ -222,7 +222,7 @@ function url_read_dir($directory, $recursive = false)
 				if ($recursive)
 					$files = array_merge($files, url_read_dir($directory.'/'.$f, $recursive));
 			}
-			elseif (substr($f, -4) == '.php' && $substr($f, 0, 6) != 'admin_' && !in_array($f, array('config.php', 'gen.php', 'install.php', 'install_mod.php', 'db_update.php', 'patcher_config.php')))
+			elseif (substr($f, -4) == '.php' && substr($f, 0, 6) != 'admin_' && !in_array($f, array('config.php', 'gen.php', 'install.php', 'install_mod.php', 'db_update.php', 'patcher_config.php')))
 				$files[] = ($directory == '.' ? '' : $directory.'/').$f;
 		}
 	}
@@ -272,10 +272,14 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	$url = ltrim($url, '\'./');
 	$url = trim($url);
 	
-	if (strpos($url, 'p=') !== false)
+	if (strpos($url, 'p=\'.') !== false)
 	{
 		$paginate = substr($url, strpos($url, 'p=\'.') + 4);
-		$paginate = substr($paginate, 0, strpos($paginate, ':'));
+		if (strpos($paginate, ':') !== false)
+			$paginate = substr($paginate, 0, strpos($paginate, ':'));
+		else
+			$paginate = substr($paginate, 0, strpos($paginate, '.'));
+
 		$paginate = trim($paginate);
 		
 		if (strpos($paginate, 'intval(') !== false)
@@ -283,9 +287,9 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		
 		if (strpos($url, 'isset('.$paginate.')') !== false)
 			$url = substr($url, 0, strpos($url, 'isset('.$paginate.')'));
-		else
+		elseif (strpos($url, $paginate) !== false)
 			$url = substr($url, 0, strpos($url, $paginate));
- 
+
 		$url = rtrim($url, '(');
 	}
 
@@ -598,10 +602,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		$ending = substr($matches[3], strpos($matches[3], '#'));
 
 
-	foreach ($query as $value)
+	foreach ($query as $key => $value)
 	{
 		$value = trim($value, "'.");
 		$value = trim($value);
+		
+		if ($key == 'p')
+			continue;
 		
 		if (substr($value, 0, 1) != '$' && strpos($value, '(') === false)
 			$value = '\''.$value.'\'';
@@ -661,7 +668,9 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			else
 				$forum_url_var = $link_p;
 			
-			$link_p = 'forum_sublink('.$forum_url_var.', $GLOBALS[\'forum_url\'][\'page\'], ($page = intval('.$paginate.')) > 1 ? $page : 1'.$args.')';
+			if ($paginate != '$p')
+				$paginate = '($page = intval('.$paginate.')) > 1 ? $page : 1';
+			$link_p = 'forum_sublink('.$forum_url_var.', $GLOBALS[\'forum_url\'][\'page\'], '.$paginate.$args.')';
 		}
 		else
 			$link_p = 'forum_link('.$link_p.')';
