@@ -119,7 +119,7 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 {
 	$expressions = array(
 		'#(href|src|action)(=")(.*?)(".{0,30})#',
-		'#(Location)(: )(.*?)(\).*)#',
+		'#(Location)(: )(.*?)(\);)#',
 		'#(redirect\()(\')(.*?)(\'*[,\)].*)#',
 		'#(get_base_url\(\)\.\'?/?)()(.*?)([\),])#',
 	);
@@ -222,7 +222,7 @@ function url_read_dir($directory, $recursive = false)
 				if ($recursive)
 					$files = array_merge($files, url_read_dir($directory.'/'.$f, $recursive));
 			}
-			elseif (substr($f, -4) == '.php' && !in_array($f, array('config.php', 'gen.php', 'install.php', 'install_mod.php', 'db_update.php', 'patcher_config.php')))
+			elseif (substr($f, -4) == '.php' && $substr($f, 0, 6) != 'admin_' && !in_array($f, array('config.php', 'gen.php', 'install.php', 'install_mod.php', 'db_update.php', 'patcher_config.php')))
 				$files[] = ($directory == '.' ? '' : $directory.'/').$f;
 		}
 	}
@@ -236,6 +236,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 	$ending = $tmp_action = '';
 	$rewrite = true;
+	$paginate = false;
 
 	$url = $matches[3];
 
@@ -270,6 +271,23 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	$url = preg_replace('/\s*\?>/', '.\'', $url);
 	$url = ltrim($url, '\'./');
 	$url = trim($url);
+	
+	if (strpos($url, 'p=') !== false)
+	{
+		$paginate = substr($url, strpos($url, 'p=\'.') + 4);
+		$paginate = substr($paginate, 0, strpos($paginate, ':'));
+		$paginate = trim($paginate);
+		
+		if (strpos($paginate, 'intval(') !== false)
+			$paginate = preg_replace('#intval\((.*)\)#', '$1', $paginate);
+		
+		if (strpos($url, 'isset('.$paginate.')') !== false)
+			$url = substr($url, 0, strpos($url, 'isset('.$paginate.')'));
+		else
+			$url = substr($url, 0, strpos($url, $paginate));
+ 
+		$url = rtrim($url, '(');
+	}
 
 	if (strpos($url, '#') !== false)
 	{
@@ -621,7 +639,6 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			$link_p .= '.\'?action='.rtrim($tmp_action, '\'').'\'';
 	}
 
-
 	if ($link_p == '')
 		return false;
 
@@ -631,15 +648,31 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	elseif (strpos($matches[1], '\'link\'') !== false) // extern.php
 		$link_p = trim($link_p, '\'');
 
-	elseif ($matches[1] == '')
-		$link_p = 'forum_link('.$link_p.')';
-	
 	else
 	{
-		if ($is_html) // html
-			$link_p = '<?php echo forum_link('.$link_p.') ?>';
-		else // php
-			$link_p = '\'.forum_link('.$link_p.').\'';
+		if ($paginate)
+		{
+			$forum_url_var = $args = '';
+			if (strpos($link_p, ',') !== false)
+			{
+				$forum_url_var = substr($link_p, 0, strpos($link_p, ','));
+				$args = substr($link_p, strpos($link_p, ','));
+			}
+			else
+				$forum_url_var = $link_p;
+			
+			$link_p = 'forum_sublink('.$forum_url_var.', $GLOBALS[\'forum_url\'][\'page\'], ($page = intval('.$paginate.')) > 1 ? $page : 1'.$args.')';
+		}
+		else
+			$link_p = 'forum_link('.$link_p.')';
+	
+		if ($matches[1] != '')
+		{
+			if ($is_html) // html
+				$link_p = '<?php echo '.$link_p.' ?>';
+			else // php
+				$link_p = '\'.'.$link_p.'.\'';
+		}
 	}
 
 	if ($matches[1] == 'Location') // header(Location: '.forum_link('*')) function
