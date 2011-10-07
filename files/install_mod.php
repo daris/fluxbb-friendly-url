@@ -3,7 +3,7 @@
 
 // Some info about your mod.
 $mod_title      = 'Friendly URL';
-$mod_version    = '1.0.6';
+$mod_version    = '1.0.7-dev';
 $release_date   = '2011-05-27';
 $author         = 'Daris';
 $author_email   = 'daris91@gmail.com';

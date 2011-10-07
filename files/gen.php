@@ -122,6 +122,8 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 		'#(Location)(: )(.*?)(\);)#',
 		'#(redirect\()(\')(.*?)(\'*[,\)].*)#',
 		'#(get_base_url\(\)\.\'?/?)()(.*?)([\),])#',
+		'#(\\\\\'\'?.?get_base_url\(true\)\.\'?/?)()(.*?)(\\\\?\'?[\),])#',
+		'#(pun_htmlspecialchars\(get_base_url\(true\)\.\'?/?)()(.*?)(\))#',
 	);
 	$manual_changes = array();
 	
@@ -251,7 +253,10 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		$matches[3] == '$pun_config[\'o_base_url\']' || // base_url
 		basename($cur_file_name) == 'common.php' && $matches[3] == 'install.php') // exclude install.php link in include/common.php
 		return false;
-		
+	
+	if (strpos($matches[1], 'pun_htmlspecialchars(get_base_url(true)') !== false)
+		$matches[4] = '';
+
 	if (strpos($matches[1], '$pun_config[\'o_base_url\'].') !== false || strpos($matches[1], 'get_base_url') !== false)
 		$matches[1] = '';
 	
@@ -263,6 +268,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		'pun_htmlspecialchars(get_base_url(true)).',
 		'pun_htmlspecialchars(get_base_url()).',
 		'get_base_url(true).',
+		'get_base_url(true) ?>',
 		'get_base_url().',
 		'pun_htmlspecialchars(\'/\')',
 	), '', $url);
@@ -271,7 +277,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	$url = preg_replace('/\s*\?>/', '.\'', $url);
 	$url = ltrim($url, '\'./');
 	$url = trim($url);
-	
+
 	if (strpos($url, 'p=\'.') !== false)
 	{
 		$paginate = substr($url, strpos($url, 'p=\'.') + 4);
@@ -408,11 +414,17 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			// Get variable name from id (eg. $cur_search['id'])
 			if (isset($query['id']) && preg_match('#(\$[a-zA-Z0-9_]+)\[#', $query['id'], $m))
 				$var = $m[1];
-			elseif (basename($cur_file) == 'post.php')
+			elseif (basename($cur_file_name) == 'post.php')
 				$var = '$cur_posting';
 
 			$var .= '[\'subject\']';
+			if ($cur_file_name == 'help.php' && isset($query['id']) && $query['id'] == 1)
+				$var = '$lang_help[\'Test topic\']';
+
 			$query['subject'] = '(isset('.$var.') ? sef_friendly('.$var.') : sef_name(\'t\', '.printable_var($query['id']).'))';
+			
+			if ($cur_file_name == 'include/parser.php')
+				$query['subject'] = 'sef_name(\'t\', '.printable_var($query['id']).')';
 		}
 		
 		if (isset($query['action']))
@@ -439,8 +451,12 @@ function url_replace($matches, $cur_file, $cur_file_name)
 				else
 					$var = $m[1].'[\'forum_name\']';
 			}
+			if ($cur_file_name == 'help.php' && isset($query['id']) && $query['id'] == 1)
+				$var = '$lang_help[\'Test forum\']';
 
 			$query['name'] = '(isset('.$var.') ? sef_friendly('.$var.') : sef_name(\'f\', '.printable_var($query['id']).'))';
+			if ($cur_file_name == 'include/parser.php')
+				$query['name'] = 'sef_name(\'f\', '.printable_var($query['id']).')';
 		}
 		else
 			$rewrite = false;
@@ -610,7 +626,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		if ($key == 'p')
 			continue;
 		
-		if (substr($value, 0, 1) != '$' && strpos($value, '(') === false)
+		if ((substr($value, 0, 1) != '$' && strpos($value, '(') === false) || substr($value, 0, 1) == '$' && is_numeric(substr($value, 1)))
 			$value = '\''.$value.'\'';
 
 		$args[] = $value;
@@ -701,6 +717,12 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	}
 	if ($matches[1] == '' && substr($matches[4], 0, 1) == '\'')
 		$matches[4] = substr($matches[4], 1);
+	
+	if (strpos($matches[0], 'get_base_url(') !== false && substr($matches[4], 0, 2) == '\\\'')
+	{
+		$matches[4] = substr($matches[4], 2);
+		$link_p = str_replace('\'', '\\\'', $link_p);
+	}
 
 	$result = $matches[1].$matches[2].$link_p.$ending.$matches[4];
 	$result = str_replace(array('\'\'.', '.\'\''), '', $result); 
@@ -713,6 +735,9 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 function printable_var($var)
 {
+	if (substr($var, 0, 1) == '$' && is_numeric(substr($var, 1)))
+		return '\''.trim($var, "'.").'\'';
+
 	return (strpos($var, '$') !== false || is_numeric(trim($var, "'."))) ? trim($var, "'.") : $var;
 }
 
