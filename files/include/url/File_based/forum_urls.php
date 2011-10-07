@@ -77,9 +77,9 @@ $forum_url = array(
 	'moderate_forum'				=>	'moderate$1.html',
 	'get_host'						=>	'get_host$1.html',
 	'move'							=>	'move_topics$1-$2.html',
-	'open'							=>	'open$1-$2-$3.html',
-	'close'							=>	'close$1-$2-$3.html',
-	'stick'							=>	'stick$1-$2-$3.html',
-	'unstick'						=>	'unstick$1-$2-$3.html',
+	'open'							=>	'open$1-$2.html',
+	'close'							=>	'close$1-$2.html',
+	'stick'							=>	'stick$1-$2.html',
+	'unstick'						=>	'unstick$1-$2.html',
 	'moderate_topic'				=>	'moderate$1-$2.html',
 );
