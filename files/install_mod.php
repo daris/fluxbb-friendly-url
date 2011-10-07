@@ -9,7 +9,7 @@ $author         = 'Daris';
 $author_email   = 'daris91@gmail.com';
 
 // Versions of FluxBB this mod was created for. A warning will be displayed, if versions do not match
-$fluxbb_versions= array('1.4.7', '1.4.6', '1.4.5', '1.4.4', '1.4.3', '1.4.2', '1.4.1', '1.4.0', '1.4-rc3');
+$fluxbb_versions= array('1.4.7');
 
 // Set this to false if you haven't implemented the restore function (see below)
 $mod_restore	= true;
@@ -22,6 +22,13 @@ function install()
 
 	if (!isset($pun_config['o_sef']))
 		$db->query('INSERT INTO '.$db->prefix.'config (conf_name, conf_value) VALUES (\'o_sef\', \'Folder_based_(fancy)\')') or error('Unable to add o_sef to config table', __FILE__, __LINE__, $db->error());
+
+	// Prevent from loading old include/cache.php file
+	if (defined('PATCHER_ROOT'))
+	{
+		$pun_config['o_sef'] = 'Folder_based_(fancy)';
+		return;
+	}
 
 	// and now, update the cache...
 	require_once PUN_ROOT.'include/cache.php';

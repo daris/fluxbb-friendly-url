@@ -1,6 +1,5 @@
 <?php
 
-
 if (!defined('PUN_ROOT'))
 {
 	define('PUN_ROOT', dirname(__FILE__).'/');
@@ -19,17 +18,19 @@ if (!isset($forum_url))
 // When running inside Patcher
 if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER' && $this->command == 'RUN' && $this->code == 'gen.php')
 {
+	require_once PUN_ROOT.'include/friendly_url.php';
+	// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
+	if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
+		require PUN_ROOT.'include/cache.php';
+	generate_config_cache();
+	generate_quickjump_cache();
+	
 	if ($this->action == 'uninstall')
 		return;
 	$changes = url_get_changes();
 	
 	$cur_readme = $this->flux_mod->id.'/files/gen.php';
 	$this->steps[$cur_readme] = url_get_steps($changes);
-	
-	// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
-	if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
-		require PUN_ROOT.'include/cache.php';
-	generate_quickjump_cache();
 }
 
 // Running outside Patcher
@@ -46,7 +47,6 @@ elseif (!defined('PATCHER_ROOT'))
 		if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
 			require PUN_ROOT.'include/cache.php';
 		generate_quickjump_cache();
-
 	}
 	else
 	{
