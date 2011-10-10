@@ -13,7 +13,10 @@ if (!defined('PUN_ROOT'))
 
 global $forum_url;
 if (!isset($forum_url))
-	require PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php';
+	if (file_exists(PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php'))
+		require PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php';
+	else
+		require MODS_DIR.'friendly-url/files/include/url/Folder_based_(fancy)/forum_urls.php';
 
 // When running inside Patcher
 if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER' && $this->command == 'RUN' && $this->code == 'gen.php')
