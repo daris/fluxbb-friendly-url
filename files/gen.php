@@ -178,20 +178,27 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 			$replace = url_replace($match, $cur_file, $cur_file_name);
 			if (!$replace)
 				continue;
+			
+			$pos = strpos($cur_file, $match[0]);
+			$cur_file = substr_replace($cur_file, $replace, $pos, strlen($match[0]));
 
-			$cur_changes[] = array($match[0], $replace);
+			$cur_changes[$pos] = array($match[0], $replace);
 		}
 		
 		if (count($cur_changes) == 0)
 			continue;
-		
-		foreach ($cur_changes as $cur_change)
-			$cur_file = str_replace($cur_change[0], $cur_change[1], $cur_file);
-		
+
 		if (!isset($changes[$cur_file_name]))
 			$changes[$cur_file_name] = array();
 	
-		$changes[$cur_file_name] = array_merge($changes[$cur_file_name], $cur_changes);
+		foreach ($cur_changes as $pos => $cur_change)
+			$changes[$cur_file_name][$pos] = $cur_change;
+	}
+	
+	if (isset($changes[$cur_file_name]))
+	{
+		ksort($changes[$cur_file_name]);
+		$changes[$cur_file_name] = array_values($changes[$cur_file_name]);
 	}
 
 	return $cur_file;
