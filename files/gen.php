@@ -209,15 +209,8 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 
 function url_get_files()
 {
-	$files = array();
-	$directories = array('.', 'include');
-	if (file_exists(PUN_ROOT.'include/attach'))
-		$directories[] = 'include/attach';
-	
-	foreach ($directories as $directory)
-		$files = array_merge($files, url_read_dir($directory));
-
-	return $files;
+	// Get the files of PUN_ROOT and include directory (get include recursive)
+	return array_merge(url_read_dir('.'), url_read_dir('include', true));
 }
 
 
