@@ -2,24 +2,20 @@
 ##
 ##        Mod title:  Friendly URL
 ##
-##      Mod version:  1.0.7-dev
+##      Mod version:  1.0.7
 ##  Works on FluxBB:  1.4.7
-##     Release date:  2011-05-27
-##      Review date:  2011-05-27
+##     Release date:  2011-10-11
+##      Review date:  2011-10-11
 ##           Author:  Daris (daris91@gmail.com)
 ##
 ##      Description:  Backport of FluxBB 1.3 friendly URL feature
 ##
 ##   Repository URL:  http://fluxbb.org/resources/mods/friendly-url/
 ##
-##         Updating:  Use update_1.0.5_to_1.0.6.diff patch file
-##
 ##   Affected files:  include/common.php
 ##                    include/functions.php
 ##                    include/cache.php
 ##                    viewtopic.php
-##
-##     Known issues:  http://localhost/fluxbb/help/http://localhost/fluxbb/help.php link in help.php
 ##
 ##       Affects DB:  Yes
 ##
