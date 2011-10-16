@@ -13,10 +13,12 @@ if (!defined('PUN_ROOT'))
 
 global $forum_url;
 if (!isset($forum_url))
+{
 	if (file_exists(PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php'))
 		require PUN_ROOT.'include/url/Folder_based_(fancy)/forum_urls.php';
 	else
 		require MODS_DIR.'friendly-url/files/include/url/Folder_based_(fancy)/forum_urls.php';
+}
 
 // When running inside Patcher
 if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER' && $this->command == 'RUN' && $this->code == 'gen.php')
@@ -27,11 +29,11 @@ if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER' && $this->command =
 		require PUN_ROOT.'include/cache.php';
 	generate_config_cache();
 	generate_quickjump_cache();
-	
+
 	if ($this->action == 'uninstall')
 		return;
 	$changes = url_get_changes();
-	
+
 	$cur_readme = $this->flux_mod->id.'/files/gen.php';
 	$this->steps[$cur_readme] = url_get_steps($changes);
 }
@@ -45,7 +47,7 @@ elseif (!defined('PATCHER_ROOT'))
 		foreach ($changes as $cur_file_name => $change_list)
 			echo '<strong style="color: green">Patching file '.pun_htmlspecialchars($cur_file_name).'</strong>... ('.count($change_list).' changes)<br />';
 		echo 'Done';
-		
+
 		// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
 		if (!defined('FORUM_CACHE_FUNCTIONS_LOADED'))
 			require PUN_ROOT.'include/cache.php';
@@ -54,7 +56,7 @@ elseif (!defined('PATCHER_ROOT'))
 	else
 	{
 		$checking_failed = false;
-			
+
 		$files = url_get_files();
 		$info = array();
 		foreach ($files as $cur_file)
@@ -69,12 +71,12 @@ elseif (!defined('PATCHER_ROOT'))
 			}
 			$info[] = pun_htmlspecialchars($cur_file).'... '.$cur_info;
 		}
-		
+
 		if (!$checking_failed)
 			echo '<strong style="color: green">Friendly URL is ready to install.</strong><br />Click the following button to do it.<br /><form method="post" action=""><input type="submit" name="install" value="Install"></form>';
 		else
 			echo '<strong style="color: #AA0000">Checking failed, see list below.</strong><br />Refresh this page when you correct these permissions.<br /><br />';
-		
+
 		echo 'Details:<br />';
 		echo implode('<br />'."\n", $info);
 	}
@@ -103,18 +105,18 @@ function url_get_changes($save = false)
 
 	$steps = $changes = $files = array();
 	$files = url_get_files();
-	
+
 	foreach ($files as $cur_file_name)
 	{
 		$cur_file = file_get_contents(PUN_ROOT.$cur_file_name);
 		$cur_file_before = $cur_file;
 
 		$cur_file = url_replace_file($cur_file_name, $cur_file, $changes);
-		
+
 		if ($save && $cur_file != $cur_file_before && !empty($cur_file))
 			file_put_contents(PUN_ROOT.$cur_file_name, $cur_file);
 	}
-	
+
 	return $changes;
 }
 
@@ -129,7 +131,7 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 		'#(pun_htmlspecialchars\(get_base_url\(true\)\.\'?/?)()(.*?)(\))#',
 	);
 	$manual_changes = array();
-	
+
 	if (basename($cur_file_name) != 'functions.php') // do not touch function paginate()
 		$expressions[] = '#(paginate\()(.*?,.*?,\s*\'?)(.*)(\'?\)[;\.].*)#';
 
@@ -139,7 +141,7 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 		$expressions[] = '#(get_base_url\(true\)\.\'?/?)()([^"]*?)(\'?[,;])#';
 		$expressions[] = '#(\'link\'\s*=>\s*)()(\'?/?[^"]*?\'?)([,;])#'; // 'link' => '/index.php',
 		$expressions[] = '#(\[\'uri\'\]\s*=\s*)()(\'?/?[^"]*?\'?)([,;])#'; // ['uri'] = '/index.php',
-		
+
 		$manual_changes[] = array(
 			'\'/viewtopic.php?id=\'.$cur_topic[\'id\'].($order_posted ? \'\' : \'&action=new\')',
 			'forum_link($GLOBALS[\'forum_url\'][\'topic\'.($order_posted ? \'_new_posts\' : \'\')], array($cur_topic[\'id\'], sef_friendly($cur_topic[\'subject\'])))',
@@ -149,7 +151,7 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 	// Do not define PUN_ROOT twice
 	if (basename($cur_file_name) != 'rewrite.php' && !preg_match('#if \(!defined\(\'PUN_ROOT\'\)\)\s*define\(\'PUN_ROOT\',#si', $cur_file) && strpos($cur_file, 'define(\'PUN_ROOT\',') !== false)
 		$manual_changes[] = array('define(\'PUN_ROOT\',', 'if (!defined(\'PUN_ROOT\'))'."\n\t".'define(\'PUN_ROOT\',');
-	
+
 	// login.php referer fix
 	if (basename($cur_file_name) == 'login.php')
 	{
@@ -165,10 +167,10 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 	foreach ($manual_changes as $cur_change)
 	{
 		$cur_file = str_replace($cur_change[0], $cur_change[1], $cur_file);
-		
+
 		if (!isset($changes[$cur_file_name]))
 			$changes[$cur_file_name] = array();
-	
+
 		$changes[$cur_file_name][] = array($cur_change[0], $cur_change[1]);
 	}
 
@@ -181,23 +183,23 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 			$replace = url_replace($match, $cur_file, $cur_file_name);
 			if (!$replace)
 				continue;
-			
+
 			$pos = strpos($cur_file, $match[0]);
 			$cur_file = substr_replace($cur_file, $replace, $pos, strlen($match[0]));
 
 			$cur_changes[$pos] = array($match[0], $replace);
 		}
-		
+
 		if (count($cur_changes) == 0)
 			continue;
 
 		if (!isset($changes[$cur_file_name]))
 			$changes[$cur_file_name] = array();
-	
+
 		foreach ($cur_changes as $pos => $cur_change)
 			$changes[$cur_file_name][$pos] = $cur_change;
 	}
-	
+
 	if (isset($changes[$cur_file_name]))
 	{
 		ksort($changes[$cur_file_name]);
@@ -246,7 +248,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	$url = $matches[3];
 
 	// Nothing to do?
-	if (preg_match('/^[a-z]+:/', $url) || // http:// 
+	if (preg_match('/^[a-z]+:/', $url) || // http://
 		preg_match('/^\$[0-9]+/', $url) || // $1, $2 - used in include/parser.php
 		strpos($matches[0], 'forum_link') !== false || // forum_link()
 		strpos($matches[0], 'forum_sublink') !== false || // forum_sublink()
@@ -256,13 +258,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		$matches[3] == '$pun_config[\'o_base_url\']' || // base_url
 		basename($cur_file_name) == 'common.php' && $matches[3] == 'install.php') // exclude install.php link in include/common.php
 		return false;
-	
+
 	if (strpos($matches[1], 'pun_htmlspecialchars(get_base_url(true)') !== false)
 		$matches[4] = '';
 
 	if (strpos($matches[1], '$pun_config[\'o_base_url\'].') !== false || strpos($matches[1], 'get_base_url') !== false)
 		$matches[1] = '';
-	
+
 	// Do some url cleaning
 	$url = str_replace('$pun_config[\'o_base_url\'].\'/', '\'', $url);
 	$url = preg_replace('#pun_htmlspecialchars\(\'?/?(.*)\)#', '$1', $url);
@@ -290,10 +292,10 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			$paginate = substr($paginate, 0, strpos($paginate, '.'));
 
 		$paginate = trim($paginate);
-		
+
 		if (strpos($paginate, 'intval(') !== false)
 			$paginate = preg_replace('#intval\((.*)\)#', '$1', $paginate);
-		
+
 		if (strpos($url, 'isset('.$paginate.')') !== false)
 			$url = substr($url, 0, strpos($url, 'isset('.$paginate.')'));
 		elseif (strpos($url, $paginate) !== false)
@@ -311,14 +313,14 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 	if ($matches[1] == 'Location' && substr($url, -1) == '\'')
 		$url = substr($url, 0, -1);
-	
+
 	// Determine that current url is inside html tags
 	$is_html = false;
-	
+
 	// We are checking orginal line from $cur_file
 	if (preg_match('#\n.*?'.preg_quote($matches[0], '#').'#', $cur_file, $l_matches) && substr(trim($l_matches[0]), 0, 1) == '<')
 		$is_html = true;
-	
+
 	if ($is_html)
 	{
 		$tags = preg_split('/(<\?php|\?>)/', $l_matches[0], -1, PREG_SPLIT_DELIM_CAPTURE);
@@ -339,9 +341,9 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 	$args = array();
 	$query = array();
-	
+
 	$url_parts = explode('?', $url);
-	
+
 	$link = $url_parts[0];
 
 	$link = substr($link, 0, strpos($link, '.php'));
@@ -379,13 +381,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 			if (isset($query['key']))
 				$link .= '_key';
-			
+
 			unset($query['action']);
 		}
 		elseif (isset($query['id']) && count($query) == 1)
 			$link = 'user';
 	}
-	
+
 	elseif ($link == 'post')
 	{
 		if (isset($query['tid']))
@@ -397,14 +399,14 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		}
 		elseif (isset($query['fid']))
 			$link = 'new_topic';
-			
+
 		if (isset($query['action'])) // don't rewrite post.php?action=*
 		{
 			$tmp_action = $query['action'];
 			unset($query['action']);
 		}
 	}
-	
+
 	elseif ($link == 'topic')
 	{
 		if (count($query) > 2)
@@ -425,22 +427,22 @@ function url_replace($matches, $cur_file, $cur_file_name)
 				$var = '$lang_help[\'Test topic\']';
 
 			$query['subject'] = '(isset('.$var.') ? sef_friendly('.$var.') : sef_name(\'t\', '.printable_var($query['id']).'))';
-			
+
 			if ($cur_file_name == 'include/parser.php')
 				$query['subject'] = 'sef_name(\'t\', '.printable_var($query['id']).')';
 		}
-		
+
 		if (isset($query['action']))
 		{
 			if ($query['action'] == 'new')
 				$link = 'topic_new_posts';
 			if (trim($query['action'], '\'') == 'last') // ?action=last'
 				$link = 'topic_last_post';
-			
+
 			unset($query['action']);
 		}
 	}
-	
+
 	elseif ($link == 'forum')
 	{
 		if (isset($query['id']))
@@ -464,16 +466,16 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		else
 			$rewrite = false;
 	}
-	
+
 	elseif ($link == 'search')
 	{
 		if (isset($query['search_id']))
 			$link .= '_results';
-		
+
 		elseif (isset($query['action']))
 		{
 			if (substr($query['action'], 0, 2) == '\'.')
-				$link = 'pun_htmlspecialchars(str_replace(\'show_\', \'search_\', $search_type[1]))';			
+				$link = 'pun_htmlspecialchars(str_replace(\'show_\', \'search_\', $search_type[1]))';
 			elseif ($query['action'] == 'new' || $query['action'] == 'show_new')
 			{
 				$link .= '_new';
@@ -520,7 +522,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 				$link = 'mark_forum_read';
 			elseif ($query['action'] == 'rules')
 				$link = 'rules';
-			
+
 			if (in_array($query['action'], array('subscribe', 'unsubscribe')))
 			{
 				$link = $query['action'];
@@ -532,14 +534,14 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 			unset($query['action']);
 		}
-		
+
 		elseif (isset($query['report']))
 			$link = 'report';
-		
+
 		elseif (isset($query['email']))
-			$link = 'email';	
+			$link = 'email';
 	}
-	
+
 	elseif ($link == 'userlist')
 	{
 		$link = 'users';
@@ -564,13 +566,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			$link = 'logout';
 		elseif ($query['action'] == 'forget')
 			$link = 'request_password';
-		
+
 		if ($matches[1] == 'action') // don't rewrite login.php?action=in for <form action="'.forum_link('*').'"> because there isn't such link in $forum_url
 			$tmp_action = $query['action'];
-		
+
 		unset($query['action']);
 	}
-	
+
 	elseif ($link == 'register' && isset($query['action']))
 	{
 		if ($matches[1] == 'action') // don't rewrite register.php?action=in for <form action="'.forum_link('*').'"> because there isn't such link in $forum_url
@@ -579,7 +581,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			unset($query['action']);
 		}
 	}
-	
+
 	elseif ($link == 'extern' && isset($query['action']) && $query['action'] == 'feed')
 	{
 		if (isset($query['fid']))
@@ -588,13 +590,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			$link = 'topic';
 		else
 			$link = 'index';
-			
+
 		$link .= '_'.$query['type'];
-		
+
 		unset($query['action']);
-		unset($query['type']);	
+		unset($query['type']);
 	}
-	
+
 	elseif ($link == 'moderate')
 	{
 		$link = 'moderate';
@@ -610,13 +612,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			$link = 'stick';
 		elseif (isset($query['unstick']))
 			$link = 'unstick';
-			
+
 		elseif (isset($query['tid']))
 			$link .= '_topic';
 		elseif (isset($query['fid']))
 			$link .= '_forum';
 	}
-	
+
 	elseif ($link == 'help' && $matches[3] != '')
 		$ending = substr($matches[3], strpos($matches[3], '#'));
 
@@ -625,16 +627,16 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	{
 		$value = trim($value, "'.");
 		$value = trim($value);
-		
+
 		if ($key == 'p')
 			continue;
-		
+
 		if ((substr($value, 0, 1) != '$' && strpos($value, '(') === false) || substr($value, 0, 1) == '$' && is_numeric(substr($value, 1)))
 			$value = '\''.$value.'\'';
 
 		$args[] = $value;
 	}
-	
+
 	if ((isset($forum_url[$link]) || strpos($link, 'profile_') !== false || strpos($link, 'str_replace') !== false) && $rewrite) // $link = profile_'.$section or search_$type
 	{
 		if (strpos($link, 'str_replace') !== false)
@@ -644,13 +646,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 		// Using $GLOBALS, cause the link could be inside function
 		$link_p = '$GLOBALS[\'forum_url\']['.$link_p.']';
-		
+
 		if (strpos($link, 'profile_') !== false) // there might be .'' at end
 			$link_p = str_replace('.\'\'', '', $link_p);
-		
+
 		if ($tmp_action != '' && $rewrite)
 			$link_p .= '.\'?action='.rtrim($tmp_action, '\'').'\'';
-		
+
 		if (count($args) == 1)
 			$link_p .= ', '.$args[0];
 		elseif (count($args) > 1)
@@ -659,7 +661,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	else
 	{
 		$link_p = correct_apostr($url);
-		
+
 		// Add temp action (after #)
 		if ($tmp_action != '' && $rewrite)
 			$link_p .= '.\'?action='.rtrim($tmp_action, '\'').'\'';
@@ -686,14 +688,14 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			}
 			else
 				$forum_url_var = $link_p;
-			
+
 			if ($paginate != '$p')
 				$paginate = '($page = intval('.$paginate.')) > 1 ? $page : 1';
 			$link_p = 'forum_sublink('.$forum_url_var.', $GLOBALS[\'forum_url\'][\'page\'], '.$paginate.$args.')';
 		}
 		else
 			$link_p = 'forum_link('.$link_p.')';
-	
+
 		if ($matches[1] != '')
 		{
 			if ($is_html) // html
@@ -705,7 +707,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 	if ($matches[1] == 'Location') // header(Location: '.forum_link('*')) function
 		$link_p = rtrim($link_p, "'.");
-		
+
 	if (strpos($matches[1], '[\'uri\']') !== false) // extern.php
 		$link_p = trim($link_p, '\'.');
 
@@ -714,13 +716,13 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		$link_p = trim($link_p, "'.");
 		if ($matches[2] == '\'')
 			$matches[2] = '';
-			
+
 		if (substr($matches[4], 0, 1) == '\'')
 			$matches[4] = substr($matches[4], 1);
 	}
 	if ($matches[1] == '' && substr($matches[4], 0, 1) == '\'')
 		$matches[4] = substr($matches[4], 1);
-	
+
 	if (strpos($matches[0], 'get_base_url(') !== false && substr($matches[4], 0, 2) == '\\\'')
 	{
 		$matches[4] = substr($matches[4], 2);
@@ -728,7 +730,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	}
 
 	$result = $matches[1].$matches[2].$link_p.$ending.$matches[4];
-	$result = str_replace(array('\'\'.', '.\'\''), '', $result); 
+	$result = str_replace(array('\'\'.', '.\'\''), '', $result);
 
 	if ($result == $matches[0])
 		return false;
@@ -751,7 +753,7 @@ function correct_apostr($str)
 
 	if (count($parts) == 0 || trim($str) == '')
 		return $str;
-	
+
 	$first = $parts[0];
 	// Remove first value if empty
 	if (trim($parts[0]) == '')
@@ -759,7 +761,7 @@ function correct_apostr($str)
 		unset($parts[0]);
 		$first = count($parts) > 0 ? $parts[1] : '';
 	}
-	
+
 	// Remove last value if empty
 	if (trim($parts[count($parts) - 1]) == '')
 		unset($parts[count($parts) - 1]);
@@ -776,6 +778,6 @@ function correct_apostr($str)
 		substr($last, 0, 4) != 'PUN_' && // constant
 		strpos($last, '(') === false)) // function
 		$str .= '\'';
-	
+
 	return $str;
 }
