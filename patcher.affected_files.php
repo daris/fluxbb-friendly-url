@@ -6,15 +6,8 @@
 
 function furl_get_affected_files()
 {
-	$files = array();
-	$directories = array('.', 'include');
-	if (file_exists(PUN_ROOT.'include/attach'))
-		$directories[] = 'include/attach';
-	
-	foreach ($directories as $directory)
-		$files = array_merge($files, furl_read_dir($directory));
-
-	return $files;
+	// Get the files of PUN_ROOT and include directory (get include recursive)
+	return array_merge(furl_read_dir('.'), furl_read_dir('include', true));
 }
 
 function furl_read_dir($directory, $recursive = false)
