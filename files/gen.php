@@ -283,11 +283,11 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	$url = ltrim($url, '\'./');
 	$url = trim($url);
 
-	if (strpos($url, 'p=\'.') !== false)
+	if (($pos = strpos($url, '&p=\'.')) !== false || ($pos = strpos($url, '?p=\'.')) !== false)
 	{
-		$paginate = substr($url, strpos($url, 'p=\'.') + 4);
-		if (strpos($paginate, ':') !== false)
-			$paginate = substr($paginate, 0, strpos($paginate, ':'));
+		$paginate = substr($url, $pos + 4);
+		if (($pos = strpos($paginate, ':')) !== false)
+			$paginate = substr($paginate, 0, $pos);
 		else
 			$paginate = substr($paginate, 0, strpos($paginate, '.'));
 
@@ -364,6 +364,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			$query[$value[0]] = isset($value[1]) ? $value[1] : '';
 		}
 	}
+
 	// Convert file name to its equivalent of $forum_url variable
 	if ($link == 'profile')
 	{

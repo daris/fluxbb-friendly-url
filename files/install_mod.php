@@ -3,8 +3,8 @@
 
 // Some info about your mod.
 $mod_title      = 'Friendly URL';
-$mod_version    = '1.0.7-dev';
-$release_date   = '2011-05-27';
+$mod_version    = '1.0.8';
+$release_date   = '2011-10-20';
 $author         = 'Daris';
 $author_email   = 'daris91@gmail.com';
 
@@ -41,7 +41,7 @@ function restore()
 	global $db, $db_type, $pun_config;
 
 	$db->query('DELETE FROM '.$db->prefix.'config WHERE conf_name=\'o_sef\'') or error('Unable to delete o_sef from config table', __FILE__, __LINE__, $db->error());
-	
+
 	// and now, update the cache...
 	require_once PUN_ROOT.'include/cache.php';
 	generate_config_cache();

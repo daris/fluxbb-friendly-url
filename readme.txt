@@ -2,10 +2,10 @@
 ##
 ##        Mod title:  Friendly URL
 ##
-##      Mod version:  1.0.7
+##      Mod version:  1.0.8
 ##  Works on FluxBB:  1.4.7
-##     Release date:  2011-10-11
-##      Review date:  2011-10-11
+##     Release date:  2011-10-20
+##      Review date:  2011-10-20
 ##           Author:  Daris (daris91@gmail.com)
 ##
 ##      Description:  Backport of FluxBB 1.3 friendly URL feature
@@ -20,7 +20,7 @@
 ##       Affects DB:  Yes
 ##
 ##       DISCLAIMER:  Please note that "mods" are not officially supported by
-##                    FluxBB. Installation of this modification is done at 
+##                    FluxBB. Installation of this modification is done at
 ##                    your own risk. Backup your forum database and any and
 ##                    all applicable files before proceeding.
 ##
@@ -273,9 +273,9 @@ include/cache.php
 #
 
 				$output .= "\t\t\t\t\t\t".'</optgroup>'."\n\t\t\t\t\t".'</select>'."\n\t\t\t\t\t".'<input type="submit" value="<?php echo $lang_common[\'Go\'] ?>" accesskey="g" onclick="return doQuickjumpRedirect(forum_quickjump_url, sef_friendly_url_array);" />'."\n\t\t\t\t\t".'</label></div>'."\n\t\t\t\t".'</form>'."\n";
-				
+
 				$output .= '<script type="text/javascript">'."\n".'var forum_quickjump_url = "<?php echo function_exists(\'forum_link\') ? forum_link($GLOBALS[\'forum_url\'][\'forum\']) : \'viewforum.php?id=$1\' ?>";'."\n".'var sef_friendly_url_array = new Array('.$db->num_rows($result).');';
-				
+
 				foreach ($sef_friendly_names as $forum_id => $forum_name)
 					$output .= "\n".'sef_friendly_url_array['.$forum_id.'] = "'.pun_htmlspecialchars($forum_name).'";';
 
