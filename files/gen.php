@@ -285,7 +285,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 
 	if (($pos = strpos($url, '&p=\'.')) !== false || ($pos = strpos($url, '?p=\'.')) !== false)
 	{
-		$paginate = substr($url, $pos + 4);
+		$paginate = substr($url, $pos + 5);
 		if (($pos = strpos($paginate, ':')) !== false)
 			$paginate = substr($paginate, 0, $pos);
 		else
