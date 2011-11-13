@@ -15,7 +15,7 @@ function forum_link($link, $args = null)
 		for ($i = 0; isset($args[$i]); ++$i)
 			$gen_link = str_replace('$'.($i + 1), $args[$i], $gen_link);
 	}
-	
+
 	if (substr($gen_link, 0, 4) != 'http')
 		$gen_link = (function_exists('get_base_url') ? get_base_url(true) : $pun_config['o_base_url']).'/'.$gen_link;
 
@@ -30,6 +30,9 @@ function forum_sublink($link, $sublink, $subarg, $args = null)
 
 	if ($sublink == $forum_url['page'] && $subarg == 1)
 		return forum_link($link, $args);
+
+	if (!in_array($link, $forum_url) && $sublink == $forum_url['page'])
+		$sublink = '&amp;p=$1';
 
 	$gen_link = $link;
 	if (!is_array($args) && $args != null)
@@ -61,7 +64,7 @@ function sef_friendly($str)
 		else
 			require PUN_ROOT.'lang/English/url_replace.php';
 	}
-	
+
 	if (!isset($forum_reserved_strings))
 	{
 		// Bring in any reserved strings
@@ -86,10 +89,10 @@ function sef_friendly($str)
 function sef_name($type, $id)
 {
 	global $db;
-	
+
 	if ($type == 'f') // forum
 		$result = $db->query('SELECT forum_name FROM '.$db->prefix.'forums WHERE id='.$id) or error('Unable to fetch forum name', __FILE__, __LINE__, $db->error());
-	
+
 	else // topic
 		$result = $db->query('SELECT subject FROM '.$db->prefix.'topics WHERE id='.$id) or error('Unable to fetch topic subject', __FILE__, __LINE__, $db->error());
 
@@ -100,7 +103,7 @@ function sef_name($type, $id)
 function fix_referer()
 {
 	global $forum_rewrite_rules, $pun_config;
-	
+
 	if (!isset($_SERVER['HTTP_REFERER']))
 		return '';
 
@@ -112,10 +115,10 @@ function fix_referer()
 		else
 			require PUN_ROOT.'include/url/Default/rewrite_rules.php';
 	}
-	
+
 	// Revove base_url from referer
 	$referer = str_replace(get_base_url(true).'/', '', $_SERVER['HTTP_REFERER']);
-	
+
 	// We go through every rewrite rule
 	foreach ($forum_rewrite_rules as $rule => $rewrite_to)
 	{
