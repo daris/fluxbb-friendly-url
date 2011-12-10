@@ -3,8 +3,8 @@
 
 // Some info about your mod.
 $mod_title      = 'Friendly URL';
-$mod_version    = '1.0.8';
-$release_date   = '2011-10-20';
+$mod_version    = '1.0.9';
+$release_date   = '2011-11-16';
 $author         = 'Daris';
 $author_email   = 'daris91@gmail.com';
 
@@ -154,3 +154,11 @@ else
 
 </body>
 </html>
+
+<?php
+
+// End the transaction
+$db->end_transaction();
+
+// Close the db connection (and free up any result data)
+$db->close();

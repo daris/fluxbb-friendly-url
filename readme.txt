@@ -2,10 +2,10 @@
 ##
 ##        Mod title:  Friendly URL
 ##
-##      Mod version:  1.0.8
+##      Mod version:  1.0.9
 ##  Works on FluxBB:  1.4.7
-##     Release date:  2011-10-20
-##      Review date:  2011-10-20
+##     Release date:  2011-11-16
+##      Review date:  2011-11-16
 ##           Author:  Daris (daris91@gmail.com)
 ##
 ##      Description:  Backport of FluxBB 1.3 friendly URL feature
@@ -16,6 +16,8 @@
 ##                    include/functions.php
 ##                    include/cache.php
 ##                    viewtopic.php
+##
+## Upgrading from 1.0.8: overwrite include/friendly_url.php file
 ##
 ##       Affects DB:  Yes
 ##
