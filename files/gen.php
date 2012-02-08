@@ -21,7 +21,7 @@ if (!isset($forum_url))
 }
 
 // When running inside Patcher
-if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER' && $this->command == 'RUN' && $this->code == 'gen.php')
+if (defined('PATCHER_ROOT') && strtolower(get_class($this)) == 'patcher' && $this->command == 'RUN' && $this->code == 'gen.php')
 {
 	require_once PUN_ROOT.'include/friendly_url.php';
 	// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
@@ -34,8 +34,8 @@ if (defined('PATCHER_ROOT') && get_class($this) == 'PATCHER' && $this->command =
 		return;
 	$changes = url_get_changes();
 
-	$cur_readme = $this->flux_mod->id.'/files/gen.php';
-	$this->steps[$cur_readme] = url_get_steps($changes);
+	$curReadme = $this->mod->id.'/files/gen.php';
+	$this->steps[$curReadme] = urlGetSteps($changes);
 }
 
 // Running outside Patcher
@@ -44,8 +44,8 @@ elseif (!defined('PATCHER_ROOT'))
 	if (isset($_POST['install']))
 	{
 		$changes = url_get_changes(true);
-		foreach ($changes as $cur_file_name => $change_list)
-			echo '<strong style="color: green">Patching file '.pun_htmlspecialchars($cur_file_name).'</strong>... ('.count($change_list).' changes)<br />';
+		foreach ($changes as $curFileName => $change_list)
+			echo '<strong style="color: green">Patching file '.pun_htmlspecialchars($curFileName).'</strong>... ('.count($change_list).' changes)<br />';
 		echo 'Done';
 
 		// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
@@ -59,17 +59,17 @@ elseif (!defined('PATCHER_ROOT'))
 
 		$files = url_get_files();
 		$info = array();
-		foreach ($files as $cur_file)
+		foreach ($files as $curFile)
 		{
-			if (is_writable(PUN_ROOT.$cur_file))
-				$cur_info = '<span style="color: green">writable</span>';
+			if (is_writable(PUN_ROOT.$curFile))
+				$curInfo = '<span style="color: green">writable</span>';
 			else
 			{
 				if (!$checking_failed)
 					$checking_failed = true;
-				$cur_info = '<strong style="color: #AA0000">not writable</strong>';
+				$curInfo = '<strong style="color: #AA0000">not writable</strong>';
 			}
-			$info[] = pun_htmlspecialchars($cur_file).'... '.$cur_info;
+			$info[] = pun_htmlspecialchars($curFile).'... '.$curInfo;
 		}
 
 		if (!$checking_failed)
@@ -83,16 +83,16 @@ elseif (!defined('PATCHER_ROOT'))
 }
 
 
-function url_get_steps($changes)
+function urlGetSteps($changes)
 {
 	$steps = array();
-	foreach ($changes as $cur_file_name => $list)
+	foreach ($changes as $curFileName => $list)
 	{
-		$steps[] = array('command' => 'OPEN', 'code' => $cur_file_name);
-		foreach ($list as $cur_change)
+		$steps[] = array('command' => 'OPEN', 'code' => $curFileName);
+		foreach ($list as $curChange)
 		{
-			$steps[] = array('command' => 'FIND', 'code' => $cur_change[0]);
-			$steps[] = array('command' => 'REPLACE', 'code' => $cur_change[1]);
+			$steps[] = array('command' => 'FIND', 'code' => $curChange[0]);
+			$steps[] = array('command' => 'REPLACE', 'code' => $curChange[1]);
 		}
 	}
 	return $steps;
@@ -101,26 +101,26 @@ function url_get_steps($changes)
 
 function url_get_changes($save = false)
 {
-	global $cur_file;
+	global $curFile;
 
 	$steps = $changes = $files = array();
 	$files = url_get_files();
 
-	foreach ($files as $cur_file_name)
+	foreach ($files as $curFileName)
 	{
-		$cur_file = file_get_contents(PUN_ROOT.$cur_file_name);
-		$cur_file_before = $cur_file;
+		$curFile = file_get_contents(PUN_ROOT.$curFileName);
+		$curFile_before = $curFile;
 
-		$cur_file = url_replace_file($cur_file_name, $cur_file, $changes);
+		$curFile = urlReplaceFile($curFileName, $curFile, $changes);
 
-		if ($save && $cur_file != $cur_file_before && !empty($cur_file))
-			file_put_contents(PUN_ROOT.$cur_file_name, $cur_file);
+		if ($save && $curFile != $curFile_before && !empty($curFile))
+			file_put_contents(PUN_ROOT.$curFileName, $curFile);
 	}
 
 	return $changes;
 }
 
-function url_replace_file($cur_file_name, $cur_file, &$changes)
+function urlReplaceFile($curFileName, $curFile, &$changes)
 {
 	$expressions = array(
 		'#(href|src|action)(=")(.*?)(".{0,30})#',
@@ -132,10 +132,10 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 	);
 	$manual_changes = array();
 
-	if (basename($cur_file_name) != 'functions.php') // do not touch function paginate()
+	if (basename($curFileName) != 'functions.php') // do not touch function paginate()
 		$expressions[] = '#(paginate\()(.*?,.*?,\s*\'?)(.*)(\'?\)[;\.].*)#';
 
-	if (basename($cur_file_name) == 'extern.php')
+	if (basename($curFileName) == 'extern.php')
 	{
 		$expressions[] = '#(\$pun_config\[\'o_base_url\'\]\.\'?/?)()([^"]*?)(\'?[,;])#';
 		$expressions[] = '#(get_base_url\(true\)\.\'?/?)()([^"]*?)(\'?[,;])#';
@@ -149,11 +149,11 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 	}
 
 	// Do not define PUN_ROOT twice
-	if (basename($cur_file_name) != 'rewrite.php' && !preg_match('#if \(!defined\(\'PUN_ROOT\'\)\)\s*define\(\'PUN_ROOT\',#si', $cur_file) && strpos($cur_file, 'define(\'PUN_ROOT\',') !== false)
+	if (basename($curFileName) != 'rewrite.php' && !preg_match('#if \(!defined\(\'PUN_ROOT\'\)\)\s*define\(\'PUN_ROOT\',#si', $curFile) && strpos($curFile, 'define(\'PUN_ROOT\',') !== false)
 		$manual_changes[] = array('define(\'PUN_ROOT\',', 'if (!defined(\'PUN_ROOT\'))'."\n\t".'define(\'PUN_ROOT\',');
 
 	// login.php referer fix
-	if (basename($cur_file_name) == 'login.php')
+	if (basename($curFileName) == 'login.php')
 	{
 		$manual_changes[] = array(
 			'if (!empty($_SERVER[\'HTTP_REFERER\']))'."\n".'{'."\n\t".'$referrer = parse_url($_SERVER[\'HTTP_REFERER\']);',
@@ -164,49 +164,49 @@ function url_replace_file($cur_file_name, $cur_file, &$changes)
 			'if ($referrer[\'host\'] == $valid[\'host\'] && preg_match(\'%^\'.preg_quote($valid[\'path\'], \'%\').\'/%i\', $referrer[\'path\']))'."\n\t\t".'$redirect_url = $_SERVER[\'HTTP_REFERER\'];',
 		);
 	}
-	foreach ($manual_changes as $cur_change)
+	foreach ($manual_changes as $curChange)
 	{
-		$cur_file = str_replace($cur_change[0], $cur_change[1], $cur_file);
+		$curFile = str_replace($curChange[0], $curChange[1], $curFile);
 
-		if (!isset($changes[$cur_file_name]))
-			$changes[$cur_file_name] = array();
+		if (!isset($changes[$curFileName]))
+			$changes[$curFileName] = array();
 
-		$changes[$cur_file_name][] = array($cur_change[0], $cur_change[1]);
+		$changes[$curFileName][] = array($curChange[0], $curChange[1]);
 	}
 
 	foreach ($expressions as $exp)
 	{
-		preg_match_all($exp, $cur_file, $matches, PREG_SET_ORDER);
-		$cur_changes = array();
+		preg_match_all($exp, $curFile, $matches, PREG_SET_ORDER);
+		$curChanges = array();
 		foreach ($matches as $match)
 		{
-			$replace = url_replace($match, $cur_file, $cur_file_name);
+			$replace = url_replace($match, $curFile, $curFileName);
 			if (!$replace)
 				continue;
 
-			$pos = strpos($cur_file, $match[0]);
-			$cur_file = substr_replace($cur_file, $replace, $pos, strlen($match[0]));
+			$pos = strpos($curFile, $match[0]);
+			$curFile = substr_replace($curFile, $replace, $pos, strlen($match[0]));
 
-			$cur_changes[$pos] = array($match[0], $replace);
+			$curChanges[$pos] = array($match[0], $replace);
 		}
 
-		if (count($cur_changes) == 0)
+		if (count($curChanges) == 0)
 			continue;
 
-		if (!isset($changes[$cur_file_name]))
-			$changes[$cur_file_name] = array();
+		if (!isset($changes[$curFileName]))
+			$changes[$curFileName] = array();
 
-		foreach ($cur_changes as $pos => $cur_change)
-			$changes[$cur_file_name][$pos] = $cur_change;
+		foreach ($curChanges as $pos => $curChange)
+			$changes[$curFileName][$pos] = $curChange;
 	}
 
-	if (isset($changes[$cur_file_name]))
+	if (isset($changes[$curFileName]))
 	{
-		ksort($changes[$cur_file_name]);
-		$changes[$cur_file_name] = array_values($changes[$cur_file_name]);
+		ksort($changes[$curFileName]);
+		$changes[$curFileName] = array_values($changes[$curFileName]);
 	}
 
-	return $cur_file;
+	return $curFile;
 }
 
 function url_get_files()
@@ -237,7 +237,7 @@ function url_read_dir($directory, $recursive = false)
 }
 
 
-function url_replace($matches, $cur_file, $cur_file_name)
+function url_replace($matches, $curFile, $curFileName)
 {
 	global $forum_url;
 
@@ -256,7 +256,7 @@ function url_replace($matches, $cur_file, $cur_file_name)
 		strpos($matches[0], '[\'forum_url\']') !== false || // $GLOBALS['forum_url'] (paginate function)
 		$matches[3] == '$pun_config[\'o_base_url\'].\'/' || // base_url (eg. used in help.php)
 		$matches[3] == '$pun_config[\'o_base_url\']' || // base_url
-		basename($cur_file_name) == 'common.php' && $matches[3] == 'install.php') // exclude install.php link in include/common.php
+		basename($curFileName) == 'common.php' && $matches[3] == 'install.php') // exclude install.php link in include/common.php
 		return false;
 
 	if (strpos($matches[1], 'pun_htmlspecialchars(get_base_url(true)') !== false)
@@ -317,8 +317,8 @@ function url_replace($matches, $cur_file, $cur_file_name)
 	// Determine that current url is inside html tags
 	$is_html = false;
 
-	// We are checking orginal line from $cur_file
-	if (preg_match('#\n.*?'.preg_quote($matches[0], '#').'#', $cur_file, $l_matches) && substr(trim($l_matches[0]), 0, 1) == '<')
+	// We are checking orginal line from $curFile
+	if (preg_match('#\n.*?'.preg_quote($matches[0], '#').'#', $curFile, $l_matches) && substr(trim($l_matches[0]), 0, 1) == '<')
 		$is_html = true;
 
 	if ($is_html)
@@ -420,16 +420,16 @@ function url_replace($matches, $cur_file, $cur_file_name)
 			// Get variable name from id (eg. $cur_search['id'])
 			if (isset($query['id']) && preg_match('#(\$[a-zA-Z0-9_]+)\[#', $query['id'], $m))
 				$var = $m[1];
-			elseif (basename($cur_file_name) == 'post.php')
+			elseif (basename($curFileName) == 'post.php')
 				$var = '$cur_posting';
 
 			$var .= '[\'subject\']';
-			if ($cur_file_name == 'help.php' && isset($query['id']) && $query['id'] == 1)
+			if ($curFileName == 'help.php' && isset($query['id']) && $query['id'] == 1)
 				$var = '$lang_help[\'Test topic\']';
 
 			$query['subject'] = '(isset('.$var.') ? sef_friendly('.$var.') : sef_name(\'t\', '.printable_var($query['id']).'))';
 
-			if ($cur_file_name == 'include/parser.php')
+			if ($curFileName == 'include/parser.php')
 				$query['subject'] = 'sef_name(\'t\', '.printable_var($query['id']).')';
 		}
 
@@ -457,11 +457,11 @@ function url_replace($matches, $cur_file, $cur_file_name)
 				else
 					$var = $m[1].'[\'forum_name\']';
 			}
-			if ($cur_file_name == 'help.php' && isset($query['id']) && $query['id'] == 1)
+			if ($curFileName == 'help.php' && isset($query['id']) && $query['id'] == 1)
 				$var = '$lang_help[\'Test forum\']';
 
 			$query['name'] = '(isset('.$var.') ? sef_friendly('.$var.') : sef_name(\'f\', '.printable_var($query['id']).'))';
-			if ($cur_file_name == 'include/parser.php')
+			if ($curFileName == 'include/parser.php')
 				$query['name'] = 'sef_name(\'f\', '.printable_var($query['id']).')';
 		}
 		else
