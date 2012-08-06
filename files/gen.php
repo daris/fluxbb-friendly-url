@@ -21,7 +21,7 @@ if (!isset($forum_url))
 }
 
 // When running inside Patcher
-if (defined('PATCHER_ROOT') && strtolower(get_class($this)) == 'patcher' && $this->command == 'RUN' && $this->code == 'gen.php')
+if (defined('PATCHER_ROOT') && isset($GLOBALS['patcher']) && strtolower(get_class($GLOBALS['patcher'])) == 'patcher' && $GLOBALS['patcher']->action->command == 'RUN' && $GLOBALS['patcher']->action->code == 'gen.php')
 {
 	require_once PUN_ROOT.'include/friendly_url.php';
 	// As we modified generate_quickjump_cache function before (using readme.txt) we have to regenerate cache
@@ -30,12 +30,12 @@ if (defined('PATCHER_ROOT') && strtolower(get_class($this)) == 'patcher' && $thi
 	generate_config_cache();
 	generate_quickjump_cache();
 
-	if ($this->action == 'uninstall')
+	if ($GLOBALS['patcher']->actionType == 'uninstall')
 		return;
 	$changes = url_get_changes();
 
-	$curReadme = $this->mod->id.'/files/gen.php';
-	$this->steps[$curReadme] = urlGetSteps($changes);
+	$curReadme = $GLOBALS['patcher']->mod->id.'/files/gen.php';
+	$GLOBALS['patcher']->steps[$curReadme] = urlGetSteps($changes);
 }
 
 // Running outside Patcher
@@ -126,6 +126,7 @@ function urlReplaceFile($curFileName, $curFile, &$changes)
 		'#(href|src|action)(=")(.*?)(".{0,30})#',
 		'#(Location)(: )(.*?)(\);)#',
 		'#(redirect\()(\')(.*?)(\'*[,\)].*)#',
+		'#(get_base_url\(\)\.\'?/?)()(.*?\(.*?\?.*?:.*?\))([\),])#',
 		'#(get_base_url\(\)\.\'?/?)()(.*?)([\),])#',
 		'#(\\\\\'\'?.?get_base_url\(true\)\.\'?/?)()(.*?)(\\\\?\'?[\),])#',
 		'#(pun_htmlspecialchars\(get_base_url\(true\)\.\'?/?)()(.*?)(\))#',
@@ -252,7 +253,7 @@ function url_replace($matches, $curFile, $curFileName)
 		preg_match('/^\$[0-9]+/', $url) || // $1, $2 - used in include/parser.php
 		strpos($matches[0], 'forum_link') !== false || // forum_link()
 		strpos($matches[0], 'forum_sublink') !== false || // forum_sublink()
-/*		strpos($matches[3], 'get_base_url') !== false || // get_base_url()*/
+		strpos($matches[3], 'get_base_url') !== false || // get_base_url()
 		strpos($matches[0], '[\'forum_url\']') !== false || // $GLOBALS['forum_url'] (paginate function)
 		$matches[3] == '$pun_config[\'o_base_url\'].\'/' || // base_url (eg. used in help.php)
 		$matches[3] == '$pun_config[\'o_base_url\']' || // base_url
@@ -304,7 +305,7 @@ function url_replace($matches, $curFile, $curFileName)
 		$url = rtrim($url, '(');
 	}
 
-	if (strpos($url, '#') !== false)
+	if ((strpos($url, 'viewtopic.php') !== false || strpos($url, 'help.php') !== false) && strpos($url, '#') !== false)
 	{
 		$url = substr($url, 0, strpos($url, '#'));
 		if ($url == '')
@@ -620,7 +621,7 @@ function url_replace($matches, $curFile, $curFileName)
 			$link .= '_forum';
 	}
 
-	elseif ($link == 'help' && $matches[3] != '')
+	elseif ($link == 'help' && $matches[3] != '' && strpos($matches[3], '#'))
 		$ending = substr($matches[3], strpos($matches[3], '#'));
 
 
@@ -767,7 +768,10 @@ function correct_apostr($str)
 	if (trim($parts[count($parts) - 1]) == '')
 		unset($parts[count($parts) - 1]);
 
-	if ((substr($first, 0, 1) != '$' || substr($first, 0, 1) == '$' && is_numeric(substr($first, 1, 1))) && // variable (allow $1)
+	if (strpos($first, '\'') !== false)
+		$first = substr($first, 0, strpos($first, '\''));
+
+	if ((substr($first, 0, 1) != '$' || (substr($first, 0, 1) == '$' && is_numeric(substr($first, 1, 1)))) && // variable (allow $1)
 		substr($first, 0, 1) != '\'' && // string
 		substr($first, 0, 4) != 'PUN_' && // constant
 		strpos($first, '(') === false) // function
@@ -775,9 +779,10 @@ function correct_apostr($str)
 
 	$last = $parts[count($parts) - 1];
 	if ((count($parts) > 1 && substr($parts[count($parts) - 2], 0, 1) == '\'') || // is string (apostrof in last-1 index)
-		(substr($last, 0, 1) != '$' && // variable
+		(substr(ltrim($last, '.'), 0, 1) != '$' && // variable
 		substr($last, 0, 4) != 'PUN_' && // constant
-		strpos($last, '(') === false)) // function
+		strpos($last, '(') === false && // function
+		strpos($last, ')') === false)) // function
 		$str .= '\'';
 
 	return $str;
